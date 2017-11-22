@@ -50,6 +50,8 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     private TessBaseAPI mTess = null;
     List<String> words = new ArrayList<>();
     static final int WORD_SIZE = 40;
+
+    private boolean stopReadingInput = false;
     
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -135,26 +137,56 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        words = new ArrayList<>();
 
-        Bitmap bmp = Bitmap.createBitmap(screenShotGray.cols(), screenShotGray.rows(), Bitmap.Config.ARGB_8888);
-        Mat result = new Mat();
-        Imgproc.adaptiveThreshold(screenShotGray, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 15, 40);
-        Utils.matToBitmap(result, bmp);
-        mTess.setImage(bmp);
+        if(!stopReadingInput) {
+            words = new ArrayList<>();
 
-        String screenText = mTess.getUTF8Text();
-        screenText = screenText.replaceAll("[^a-zA-Z0-9 ]+", "");
-        for(int i = 0; i < screenText.length(); i += WORD_SIZE) {
-            words.add(screenText.substring(i, Math.min(screenText.length(), i + WORD_SIZE)));
+            Bitmap bmp = Bitmap.createBitmap(screenShotGray.cols(), screenShotGray.rows(), Bitmap.Config.ARGB_8888);
+            Mat result = new Mat();
+            Imgproc.adaptiveThreshold(screenShotGray, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 21, 10);
+            screenShot = result;
+            Utils.matToBitmap(result, bmp);
+            mTess.setImage(bmp);
+
+            String screenText = mTess.getUTF8Text();
+//        screenText = screenText.replaceAll("[^a-zA-Z0-9 +=]+", "");
+
+            if(screenText.matches("[0-9]+ *[+-] *[0-9]+ *= *")) {
+                int operatorIndex = screenText.indexOf("+");
+                String operator = "+";
+                if(operatorIndex < 0) {
+                    operatorIndex = screenText.indexOf("-");
+                    operator = "-";
+                }
+
+                int equalsIndex = screenText.indexOf("=");
+                String firstNum = screenText.substring(0, operatorIndex).trim();
+                String secondNum = screenText.substring(operatorIndex + 1, equalsIndex).trim();
+                String answer = "";
+                if(operator == "+") {
+                    answer = Integer.toString(Integer.valueOf(firstNum) + Integer.valueOf(secondNum));
+                } else {
+                    answer = Integer.toString(Integer.valueOf(firstNum) - Integer.valueOf(secondNum));
+                }
+                screenText += " " + answer;
+            }
+
+            for(int i = 0; i < screenText.length(); i += WORD_SIZE) {
+                words.add(screenText.substring(i, Math.min(screenText.length(), i + WORD_SIZE)));
+            }
         }
+
+        stopReadingInput = !stopReadingInput;
 
 		return false;
     }
     
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        screenShot = inputFrame.rgba();
-        screenShotGray = inputFrame.gray();
+        if(!stopReadingInput) {
+            screenShot = inputFrame.rgba();
+            screenShotGray = inputFrame.gray();
+        }
+
         for(int i = 0; i < words.size(); i++) {
             Imgproc.putText(
                     screenShot,
