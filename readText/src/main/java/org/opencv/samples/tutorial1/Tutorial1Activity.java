@@ -99,7 +99,6 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
         mTess = new TessBaseAPI();
         mTess.init(DATA_PATH, LANG);
-
     }
 
     @Override
@@ -143,7 +142,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
             Bitmap bmp = Bitmap.createBitmap(screenShotGray.cols(), screenShotGray.rows(), Bitmap.Config.ARGB_8888);
             Mat result = new Mat();
-            Imgproc.adaptiveThreshold(screenShotGray, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 21, 10);
+            Imgproc.adaptiveThreshold(screenShotGray, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 61, 30);
             screenShot = result;
             Utils.matToBitmap(result, bmp);
             mTess.setImage(bmp);
@@ -151,7 +150,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
             String screenText = mTess.getUTF8Text();
 //        screenText = screenText.replaceAll("[^a-zA-Z0-9 +=]+", "");
 
-            if(screenText.matches("[0-9]+ *[+-] *[0-9]+ *= *")) {
+            if(screenText.matches("[0-9]+ *[+-] *[0-9]+ *[=:] *")) {
                 int operatorIndex = screenText.indexOf("+");
                 String operator = "+";
                 if(operatorIndex < 0) {
@@ -160,6 +159,9 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
                 }
 
                 int equalsIndex = screenText.indexOf("=");
+                if (equalsIndex < 0) {
+                    equalsIndex = screenText.indexOf(":");
+                }
                 String firstNum = screenText.substring(0, operatorIndex).trim();
                 String secondNum = screenText.substring(operatorIndex + 1, equalsIndex).trim();
                 String answer = "";
