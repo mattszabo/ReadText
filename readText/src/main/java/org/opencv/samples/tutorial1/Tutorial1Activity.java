@@ -38,20 +38,21 @@ import java.util.List;
 
 public class Tutorial1Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
+    public static final String TESS_TRAINEDDATA_PATH = "/tessdata/eng.traineddata";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean              mIsJavaCamera = true;
     private MenuItem             mItemSwitchCamera = null;
 
-    private Mat screenShot = null;
-    private Mat screenShotGray = null;
+    private Mat displayedFrame = null;
+    private Mat grayFrame = null;
 
-    private String DATA_PATH = null;
-    private TessBaseAPI mTess = null;
+    private String DATA_PATH;
+    private TessBaseAPI mTess;
     List<String> words = new ArrayList<>();
     static final int WORD_SIZE = 40;
 
-    private boolean stopReadingInput = false;
+    private boolean stopReadingCameraInput;
     
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -99,6 +100,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
         mTess = new TessBaseAPI();
         mTess.init(DATA_PATH, LANG);
+        stopReadingCameraInput = false;
     }
 
     @Override
@@ -137,20 +139,21 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     @Override
     public boolean onTouch(View v, MotionEvent event) {
 
-        if(!stopReadingInput) {
+        if(!stopReadingCameraInput) {
             words = new ArrayList<>();
 
-            Bitmap bmp = Bitmap.createBitmap(screenShotGray.cols(), screenShotGray.rows(), Bitmap.Config.ARGB_8888);
+            Bitmap bmp = Bitmap.createBitmap(grayFrame.cols(), grayFrame.rows(), Bitmap.Config.ARGB_8888);
             Mat result = new Mat();
-            Imgproc.adaptiveThreshold(screenShotGray, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 61, 30);
-            screenShot = result;
+            Imgproc.adaptiveThreshold(grayFrame, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 61, 30);
+            // display the processed, text readable image
+            displayedFrame = result;
             Utils.matToBitmap(result, bmp);
             mTess.setImage(bmp);
 
             String screenText = mTess.getUTF8Text();
-//        screenText = screenText.replaceAll("[^a-zA-Z0-9 +=]+", "");
+            //screenText = screenText.replaceAll("[^a-zA-Z0-9 +-=:]+", "");
 
-            if(screenText.matches("[0-9]+ *[+-] *[0-9]+ *[=:] *")) {
+            if(screenText.matches("[0-9]+ *[+-] *[0-9]+ *[=:]")) {
                 int operatorIndex = screenText.indexOf("+");
                 String operator = "+";
                 if(operatorIndex < 0) {
@@ -178,20 +181,20 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
             }
         }
 
-        stopReadingInput = !stopReadingInput;
+        stopReadingCameraInput = !stopReadingCameraInput;
 
 		return false;
     }
     
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        if(!stopReadingInput) {
-            screenShot = inputFrame.rgba();
-            screenShotGray = inputFrame.gray();
+        if(!stopReadingCameraInput) {
+            displayedFrame = inputFrame.rgba();
+            grayFrame = inputFrame.gray();
         }
 
         for(int i = 0; i < words.size(); i++) {
             Imgproc.putText(
-                    screenShot,
+                    displayedFrame,
                     words.get(i),
                     new Point(50, 60 * (i + 1)),
                     Core.FONT_HERSHEY_SIMPLEX,
@@ -200,30 +203,26 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
                     2
             );
         }
-        return screenShot;
+        return displayedFrame;
     }
 
-    private void copyFiles() {
+    private void copyTessTrainedDataFile() {
         try {
-            //location we want the file to be at
-            String filepath = DATA_PATH + "/tessdata/eng.traineddata";
-
-            //get access to AssetManager
+            String filepath = DATA_PATH + TESS_TRAINEDDATA_PATH;
             AssetManager assetManager = getAssets();
 
-            //open byte streams for reading/writing
-            InputStream instream = assetManager.open("tessdata/eng.traineddata");
-            OutputStream outstream = new FileOutputStream(filepath);
+            InputStream in = assetManager.open(TESS_TRAINEDDATA_PATH);
+            OutputStream out = new FileOutputStream(filepath);
 
             //copy the file to the location specified by filepath
             byte[] buffer = new byte[1024];
-            int read;
-            while ((read = instream.read(buffer)) != -1) {
-                outstream.write(buffer, 0, read);
+            int readLength;
+            while ((readLength = in.read(buffer)) != -1) {
+                out.write(buffer, 0, readLength);
             }
-            outstream.flush();
-            outstream.close();
-            instream.close();
+            out.flush();
+            out.close();
+            in.close();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -233,16 +232,15 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     }
 
     private void checkFile(File dir) {
-        //directory does not exist, but we can successfully create it
-        if (!dir.exists()&& dir.mkdirs()){
-            copyFiles();
+        if (!dir.exists() && dir.mkdirs()){
+            copyTessTrainedDataFile();
         }
-        //The directory exists, but there is no data file in it
+
         if(dir.exists()) {
-            String datafilepath = DATA_PATH + "/tessdata/eng.traineddata";
-            File datafile = new File(datafilepath);
-            if (!datafile.exists()) {
-                copyFiles();
+            String tessTrainedDataPath = DATA_PATH + TESS_TRAINEDDATA_PATH;
+            File trainedData = new File(tessTrainedDataPath);
+            if (!trainedData.exists()) {
+                copyTessTrainedDataFile();
             }
         }
     }
