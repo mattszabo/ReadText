@@ -24,8 +24,10 @@ import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -33,12 +35,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Tutorial1Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
-    public static final String TESS_TRAINEDDATA_PATH = "/tessdata/eng.traineddata";
+    private static final String TESS_TRAINEDDATA_ASSETS_PATH = "tessdata/eng.traineddata";
+    private static final boolean FACE_REC = false;
+    private static final String FACE_CASCADE_ASSETS_PATH = "lbpcascade_frontalface_improved";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean              mIsJavaCamera = true;
@@ -47,10 +52,14 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     private Mat displayedFrame = null;
     private Mat grayFrame = null;
 
-    private String DATA_PATH;
+    private String tesseractTrainedDataPath;
+    private String faceCascadeDataPath;
     private TessBaseAPI mTess;
     List<String> words = new ArrayList<>();
     static final int WORD_SIZE = 40;
+
+
+    CascadeClassifier face_cascade;
 
     private boolean stopReadingCameraInput;
     
@@ -91,16 +100,24 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
         mOpenCvCameraView.setCvCameraViewListener(this);
 
-        DATA_PATH = getFilesDir()+ "/tesseract/";
+        tesseractTrainedDataPath = getFilesDir() + "/tesseract/";
+        faceCascadeDataPath = getFilesDir() + "/cascades/";
 
         //make sure training data has been copied
-        checkFile(new File(DATA_PATH + "tessdata/"));
+        checkFile(new File(tesseractTrainedDataPath + "tessdata/"), tesseractTrainedDataPath, TESS_TRAINEDDATA_ASSETS_PATH);
+        checkFile(new File(faceCascadeDataPath + "cascades/"), faceCascadeDataPath, FACE_CASCADE_ASSETS_PATH);
 
         String LANG = "eng";
 
         mTess = new TessBaseAPI();
-        mTess.init(DATA_PATH, LANG);
+        mTess.init(tesseractTrainedDataPath, LANG);
         stopReadingCameraInput = false;
+
+//        int faceCascadeId = getResources().getIdentifier(FACE_CASCADE_ASSETS_PATH, "raw", getPackageName());
+
+//        if(!face_cascade.load()) {
+//            //ERROR
+//        }
     }
 
     @Override
@@ -138,12 +155,17 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
+        if(FACE_REC) {
+            detectAndDisplay(displayedFrame);
+            return false;
+        }
 
         if(!stopReadingCameraInput) {
             words = new ArrayList<>();
 
             Bitmap bmp = Bitmap.createBitmap(grayFrame.cols(), grayFrame.rows(), Bitmap.Config.ARGB_8888);
             Mat result = new Mat();
+//            Imgproc.equalizeHist(grayFrame, grayFrame);
             Imgproc.adaptiveThreshold(grayFrame, result, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY, 61, 30);
             // display the processed, text readable image
             displayedFrame = result;
@@ -206,13 +228,18 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         return displayedFrame;
     }
 
-    private void copyTessTrainedDataFile() {
+    private void detectAndDisplay(Mat frame) {
+        ArrayDeque<Rect> faces = new ArrayDeque<>();
+        Mat gray = null;
+        Imgproc.equalizeHist(grayFrame, gray);
+    }
+
+    private void copyTessTrainedDataFile(String filePath, String filePathInAssets) {
         try {
-            String filepath = DATA_PATH + TESS_TRAINEDDATA_PATH;
             AssetManager assetManager = getAssets();
 
-            InputStream in = assetManager.open(TESS_TRAINEDDATA_PATH);
-            OutputStream out = new FileOutputStream(filepath);
+            InputStream in = assetManager.open(filePathInAssets);
+            OutputStream out = new FileOutputStream(filePath + filePathInAssets);
 
             //copy the file to the location specified by filepath
             byte[] buffer = new byte[1024];
@@ -231,16 +258,16 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         }
     }
 
-    private void checkFile(File dir) {
+    private void checkFile(File dir, String filePath, String filePathInAssets) {
         if (!dir.exists() && dir.mkdirs()){
-            copyTessTrainedDataFile();
+            copyTessTrainedDataFile(filePath, filePathInAssets);
         }
 
         if(dir.exists()) {
-            String tessTrainedDataPath = DATA_PATH + TESS_TRAINEDDATA_PATH;
-            File trainedData = new File(tessTrainedDataPath);
+
+            File trainedData = new File(filePath + filePathInAssets);
             if (!trainedData.exists()) {
-                copyTessTrainedDataFile();
+                copyTessTrainedDataFile(filePath, filePathInAssets);
             }
         }
     }
