@@ -23,11 +23,14 @@ import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.objdetect.Objdetect;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,14 +38,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Tutorial1Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
-    private static final String TESS_TRAINEDDATA_ASSETS_PATH = "tessdata/eng.traineddata";
+
     private static final boolean FACE_REC = false;
+
+    private static final String TESS_TRAINEDDATA_ASSETS_PATH = "tessdata/eng.traineddata";
     private static final String FACE_CASCADE_ASSETS_PATH = "cascades/lbpcascade_frontalface_improved.xml";
 
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -168,7 +172,10 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         if(FACE_REC) {
-            detectAndDisplay(displayedFrame);
+            if(!stopReadingCameraInput) {
+                displayedFrame = detectAndDisplay(displayedFrame);
+            }
+            stopReadingCameraInput = !stopReadingCameraInput;
             return false;
         }
 
@@ -221,6 +228,14 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     }
     
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        if(FACE_REC) {
+            if(!stopReadingCameraInput) {
+                displayedFrame = inputFrame.rgba();
+                grayFrame = inputFrame.gray();
+            }
+            return displayedFrame;
+        }
+
         if(!stopReadingCameraInput) {
             displayedFrame = inputFrame.rgba();
             grayFrame = inputFrame.gray();
@@ -238,12 +253,30 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
             );
         }
         return displayedFrame;
+
     }
 
-    private void detectAndDisplay(Mat frame) {
-        ArrayDeque<Rect> faces = new ArrayDeque<>();
-        Mat gray = null;
-        Imgproc.equalizeHist(grayFrame, gray);
+    private Mat detectAndDisplay(Mat frame) {
+        Mat mRgba = new Mat();
+        frame.copyTo(mRgba);
+        Mat mGray = new Mat();
+
+        Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY); // Convert to grayscale
+        MatOfRect faces = new MatOfRect();
+
+        if (face_cascade != null) {
+            face_cascade.detectMultiScale(mGray, faces, 1.1, 2, Objdetect.CASCADE_SCALE_IMAGE, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
+                    new Size(30, 30), new Size());
+
+        }
+
+        // Each rectangle in the faces array is a face
+        // Draw a rectangle around each face
+        Rect[] facesArray = faces.toArray();
+        for (int i = 0; i < facesArray.length; i++)
+            Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), new Scalar(255, 255, 0), 3);
+
+        return mRgba;
     }
 
     private void copyTessTrainedDataFile(String filePath, String filePathInAssets) {
