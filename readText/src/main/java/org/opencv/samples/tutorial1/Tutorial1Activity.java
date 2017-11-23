@@ -67,11 +67,20 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         @Override
         public void onManagerConnected(int status) {
             switch (status) {
+                /**
+                 *  Initialisation of OpenCV objects can go here.
+                 */
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
                     mOpenCvCameraView.setOnTouchListener(Tutorial1Activity.this);
+
+                    File cascadeFile = new File(faceCascadeDataPath + FACE_CASCADE_ASSETS_PATH);
+                    face_cascade = new CascadeClassifier(cascadeFile.getAbsolutePath());
+                    if(!face_cascade.load(cascadeFile.getAbsolutePath())) {
+                        //ERROR
+                    }
                 } break;
                 default:
                 {
@@ -85,7 +94,12 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
-    /** Called when the activity is first created. */
+    /** Called when the activity is first created.
+     *
+     *  NOTE: you CANNOT call OpenCV code at this point. Initialisation of OpenCV objects
+     *        can be done in onManagerConnected method in LoaderCallbackInterface.SUCCESS block
+     *
+     * */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
@@ -114,13 +128,8 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         mTess.init(tesseractTrainedDataPath, LANG);
         stopReadingCameraInput = false;
 
-//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-//        File cascadeFile = new File(faceCascadeDataPath + FACE_CASCADE_ASSETS_PATH);
-//        face_cascade = new CascadeClassifier(cascadeFile.getAbsolutePath());
-//        if(!face_cascade.load(cascadeFile.getAbsolutePath())) {
-//            //ERROR
-//        }
+
     }
 
     @Override
