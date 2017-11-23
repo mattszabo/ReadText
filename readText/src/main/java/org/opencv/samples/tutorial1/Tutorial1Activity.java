@@ -11,6 +11,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.WindowManager;
+import android.widget.ToggleButton;
 
 import com.googlecode.tesseract.android.TessBaseAPI;
 
@@ -44,7 +45,7 @@ import java.util.List;
 public class Tutorial1Activity extends Activity implements CvCameraViewListener2, OnTouchListener {
     private static final String TAG = "OCVSample::Activity";
 
-    private static final boolean FACE_REC = false;
+    private boolean faceRecOn = false;
 
     private static final String TESS_TRAINEDDATA_ASSETS_PATH = "tessdata/eng.traineddata";
     private static final String FACE_CASCADE_ASSETS_PATH = "cascades/lbpcascade_frontalface_improved.xml";
@@ -62,6 +63,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     List<String> words = new ArrayList<>();
     static final int WORD_SIZE = 40;
 
+    ToggleButton toggleFace;
 
     CascadeClassifier face_cascade;
 
@@ -132,8 +134,22 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         mTess.init(tesseractTrainedDataPath, LANG);
         stopReadingCameraInput = false;
 
-
-
+        toggleFace = (ToggleButton)findViewById(R.id.toggleButton);
+        toggleFace.setChecked(false);
+        toggleFace.setText("Text");
+        toggleFace.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                toggleFace.setChecked(!toggleFace.isChecked());
+                if( toggleFace.isChecked() ) {
+                    toggleFace.setText("Face");
+                    faceRecOn = true;
+                } else {
+                    toggleFace.setText("Text");
+                    faceRecOn = false;
+                }
+            }
+        });
     }
 
     @Override
@@ -171,7 +187,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if(FACE_REC) {
+        if(faceRecOn) {
             if(!stopReadingCameraInput) {
                 displayedFrame = detectAndDisplay(displayedFrame);
             }
@@ -228,7 +244,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     }
     
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        if(FACE_REC) {
+        if(faceRecOn) {
             if(!stopReadingCameraInput) {
                 displayedFrame = inputFrame.rgba();
                 grayFrame = inputFrame.gray();
