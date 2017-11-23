@@ -43,7 +43,7 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
     private static final String TAG = "OCVSample::Activity";
     private static final String TESS_TRAINEDDATA_ASSETS_PATH = "tessdata/eng.traineddata";
     private static final boolean FACE_REC = false;
-    private static final String FACE_CASCADE_ASSETS_PATH = "lbpcascade_frontalface_improved";
+    private static final String FACE_CASCADE_ASSETS_PATH = "cascades/lbpcascade_frontalface_improved.xml";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private boolean              mIsJavaCamera = true;
@@ -101,9 +101,10 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         mOpenCvCameraView.setCvCameraViewListener(this);
 
         tesseractTrainedDataPath = getFilesDir() + "/tesseract/";
-        faceCascadeDataPath = getFilesDir() + "/cascades/";
+        faceCascadeDataPath = getFilesDir().getPath() + "/";
 
-        //make sure training data has been copied
+        // make sure training data has been copied
+        // first param needs the directory path under the assets file appended to it for the check.
         checkFile(new File(tesseractTrainedDataPath + "tessdata/"), tesseractTrainedDataPath, TESS_TRAINEDDATA_ASSETS_PATH);
         checkFile(new File(faceCascadeDataPath + "cascades/"), faceCascadeDataPath, FACE_CASCADE_ASSETS_PATH);
 
@@ -113,9 +114,11 @@ public class Tutorial1Activity extends Activity implements CvCameraViewListener2
         mTess.init(tesseractTrainedDataPath, LANG);
         stopReadingCameraInput = false;
 
-//        int faceCascadeId = getResources().getIdentifier(FACE_CASCADE_ASSETS_PATH, "raw", getPackageName());
+//        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 
-//        if(!face_cascade.load()) {
+//        File cascadeFile = new File(faceCascadeDataPath + FACE_CASCADE_ASSETS_PATH);
+//        face_cascade = new CascadeClassifier(cascadeFile.getAbsolutePath());
+//        if(!face_cascade.load(cascadeFile.getAbsolutePath())) {
 //            //ERROR
 //        }
     }
